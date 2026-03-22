@@ -3,6 +3,7 @@ import { splitPdf } from "./fileLoader.ts";
 import neo4j from "neo4j-driver";
 import { CONFIG } from "./config.ts";
 import { pipeline } from "@huggingface/transformers";
+import { ChatOpenAI } from "@langchain/openai";
 
 const embedder = await pipeline(
     "feature-extraction",
@@ -65,18 +66,37 @@ const storeChunksInNeo4j = async (chunks: Document[]) => {
     }
 }
 
-export const askQuestions = async (questions: String[]) => {
+export const askQuestions = async (questions: string[]) => {
     console.log('...starting to ask questions...\n');
 
-    questions.forEach((question) => {
+    for (const question of questions) {
+
         console.log(`\n=> Question: ${question}\n`)
 
         // enrich with RAG
 
         // handover question to LLM
+        const nplModel = new ChatOpenAI({
+            modelName: CONFIG.openRouter.nlpModel,
+            temperature: CONFIG.openRouter.temperature,
+            maxRetries: CONFIG.openRouter.maxRetries,
+            apiKey: CONFIG.openRouter.apiKey,
+            configuration: {
+                baseURL: CONFIG.openRouter.url,
+                defaultHeaders: CONFIG.openRouter.defaultHeaders
+            }
+        });
 
-        // display results
-    });
+        const response = await nplModel.invoke([
+            {
+                role: "user",
+                content: question
+            }
+        ])
+
+        console.log(`== response: ${response.content}`)
+
+    }
 
     console.log('\n...questions answered; closing application...\n');
 };
@@ -86,9 +106,9 @@ await prepareRAG();
 
 const questions = [
     'What is a tensor ?',
-    'How tensorflow stores the data ?',
-    'What can man do with tensorflow.js?',
-    'What is the difference between regular tensorflow and tensorflow.js?'
+    // 'How tensorflow stores the data ?',
+    // 'What can man do with tensorflow.js?',
+    // 'What is the difference between regular tensorflow and tensorflow.js?'
 ]
 
 await askQuestions(questions);

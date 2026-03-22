@@ -2,6 +2,13 @@ import { Document } from "@langchain/core/documents";
 import { splitPdf } from "./fileLoader.ts";
 import neo4j from "neo4j-driver";
 import { CONFIG } from "./config.ts";
+import { pipeline } from "@huggingface/transformers";
+
+const embedder = await pipeline(
+    "feature-extraction",
+    CONFIG.embedding.modelName,
+    CONFIG.embedding.pretrainedOptions,
+);
 
 const driver = neo4j.driver(
     CONFIG.neo4j.url,
@@ -12,7 +19,7 @@ const driver = neo4j.driver(
 )
 
 const prepareRAG = async () => {
-    console.log('...preparing RAG...\n');
+    console.log('\n...preparing RAG...\n');
 
     const chunks = await splitPdf();
     // console.log(`\n${JSON.stringify(chunks[0], null, 2)}\n`);
@@ -26,15 +33,26 @@ const storeChunksInNeo4j = async (chunks: Document[]) => {
 
     console.log(`\n...storing in Neo4j...\n`);
     try {
-
         for (const [i, chunk] of chunks.entries()) {
+           
+            const output = await embedder(chunk.pageContent, { pooling: "mean", normalize: true });
+
+            const embedding = Array.from(output.data)
+
             await session.run(
-                `CREATE (c:${CONFIG.neo4j.nodeLabel} {index: $index, content: $content, source: $source, page: $page})`,
+                `CREATE (c:${CONFIG.neo4j.nodeLabel} {
+                    index: $index, 
+                    content: $content, 
+                    source: $source, 
+                    page: $page,
+                    embedding: $embedding
+                })`,
                 {
                     index: neo4j.int(i),
                     content: chunk.pageContent,
                     source: chunk?.metadata?.source ?? '',
-                    page: neo4j.int(chunk?.metadata?.loc?.pageNumber)
+                    page: neo4j.int(chunk?.metadata?.loc?.pageNumber),
+                    embedding,
                 }
             );
 

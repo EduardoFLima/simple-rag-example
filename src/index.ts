@@ -8,9 +8,13 @@ const driver = neo4j.driver(
 )
 
 const prepareRAG = async () => {
+    console.log('...preparing RAG...\n');
+
     const chunks = await splitPdf();
     // console.log(`\n${JSON.stringify(chunks[0], null, 2)}\n`);
     await storeChunksInNeo4j(chunks);
+
+    console.log('\n...RAG prepared !...\n');
 }
 
 const storeChunksInNeo4j = async (chunks: Document[]) => {
@@ -39,14 +43,12 @@ const storeChunksInNeo4j = async (chunks: Document[]) => {
     }
 }
 
-export const run = async () => {
-    console.log('...starting...\n');
+export const askQuestions = async () => {
+    console.log('...starting to ask questions...\n');
 
-    await prepareRAG();
-
-
-
-    console.log('\n...ending...\n');
+    console.log('\n...questions answered; closing application...\n');
 };
 
-await run();
+await prepareRAG();
+
+await askQuestions();

@@ -34,7 +34,7 @@ const storeChunksInNeo4j = async (chunks: Document[]) => {
     console.log(`\n...storing in Neo4j...\n`);
     try {
         for (const [i, chunk] of chunks.entries()) {
-           
+
             const output = await embedder(chunk.pageContent, { pooling: "mean", normalize: true });
 
             const embedding = Array.from(output.data)
@@ -65,15 +65,8 @@ const storeChunksInNeo4j = async (chunks: Document[]) => {
     }
 }
 
-export const askQuestions = async () => {
+export const askQuestions = async (questions: String[]) => {
     console.log('...starting to ask questions...\n');
-
-    const questions = [
-        'What is a tensor ?',
-        'How tensorflow stores the data ?',
-        'What can man do with tensorflow.js?',
-        'What is the difference between regular tensorflow and tensorflow.js?'
-    ]
 
     questions.forEach((question) => {
         console.log(`\n=> Question: ${question}\n`)
@@ -81,7 +74,6 @@ export const askQuestions = async () => {
         // enrich with RAG
 
         // handover question to LLM
-
 
         // display results
     });
@@ -91,4 +83,12 @@ export const askQuestions = async () => {
 
 await prepareRAG();
 
-await askQuestions();
+
+const questions = [
+    'What is a tensor ?',
+    'How tensorflow stores the data ?',
+    'What can man do with tensorflow.js?',
+    'What is the difference between regular tensorflow and tensorflow.js?'
+]
+
+await askQuestions(questions);

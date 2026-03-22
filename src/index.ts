@@ -50,6 +50,24 @@ const storeChunksInNeo4j = async (chunks: Document[]) => {
 export const askQuestions = async () => {
     console.log('...starting to ask questions...\n');
 
+    const questions = [
+        'What is a tensor ?',
+        'How tensorflow stores the data ?',
+        'What can man do with tensorflow.js?',
+        'What is the difference between regular tensorflow and tensorflow.js?'
+    ]
+
+    questions.forEach((question) => {
+        console.log(`\n=> Question: ${question}\n`)
+
+        // enrich with RAG
+
+        // handover question to LLM
+
+
+        // display results
+    });
+
     console.log('\n...questions answered; closing application...\n');
 };
 

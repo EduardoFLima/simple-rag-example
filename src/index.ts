@@ -1,10 +1,14 @@
 import { Document } from "@langchain/core/documents";
 import { splitPdf } from "./fileLoader.ts";
 import neo4j from "neo4j-driver";
+import { CONFIG } from "./config.ts";
 
 const driver = neo4j.driver(
-    'neo4j://localhost',
-    neo4j.auth.basic('neo4j', 'password')
+    CONFIG.neo4j.url,
+    neo4j.auth.basic(
+        CONFIG.neo4j.username,
+        CONFIG.neo4j.password
+    )
 )
 
 const prepareRAG = async () => {
@@ -25,7 +29,7 @@ const storeChunksInNeo4j = async (chunks: Document[]) => {
 
         for (const [i, chunk] of chunks.entries()) {
             await session.run(
-                `CREATE (c:Chunk {index: $index, content: $content, source: $source, page: $page})`,
+                `CREATE (c:${CONFIG.neo4j.nodeLabel} {index: $index, content: $content, source: $source, page: $page})`,
                 {
                     index: neo4j.int(i),
                     content: chunk.pageContent,

@@ -4,6 +4,8 @@ import neo4j from "neo4j-driver";
 import { CONFIG } from "./config.ts";
 import { pipeline } from "@huggingface/transformers";
 import { ChatOpenAI } from "@langchain/openai";
+import { readFile } from "node:fs/promises"
+import { ChatPromptTemplate } from "@langchain/core/prompts";
 
 const embedder = await pipeline(
     "feature-extraction",
@@ -87,12 +89,23 @@ export const askQuestions = async (questions: string[]) => {
             }
         });
 
-        const response = await nplModel.invoke([
-            {
-                role: "user",
-                content: question
-            }
-        ])
+        const { promptConfig } = CONFIG;
+
+        const responseChain = ChatPromptTemplate.fromTemplate(CONFIG.templateText)
+            .pipe(nplModel)
+
+        const response = await responseChain.invoke({
+            role: promptConfig.role,
+            task: promptConfig.task,
+            tone: promptConfig.tone,
+            language: promptConfig.constraints.language,
+            format: promptConfig.constraints.format,
+            instructions: promptConfig.instructions.map((instruction: string, idx: number) =>
+                `${idx + 1}. ${instruction}`
+            ).join('\n'),
+            question,
+            context: ``
+        })
 
         console.log(`== response: ${response.content}`)
 

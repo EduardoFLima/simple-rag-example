@@ -6,6 +6,13 @@ import { ChatOpenAI } from "@langchain/openai";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/huggingface_transformers";
 
+const questions = [
+    'What is a tensor ?',
+    // 'How tensorflow stores the data ?',
+    // 'What can man do with tensorflow.js?',
+    // 'What is the difference between regular tensorflow and tensorflow.js?'
+]
+
 const clearDB = async (vectorStore: Neo4jVectorStore, nodeLabel: string) => {
     console.log("\n...Cleaning existing docs...");
 
@@ -14,6 +21,16 @@ const clearDB = async (vectorStore: Neo4jVectorStore, nodeLabel: string) => {
     )
 
     console.log("\n...Docs successfully removed! ✅...");
+}
+
+const storeChunksInNeo4j = async (vectorStore: Neo4jVectorStore, chunks: Document[]) => {
+    console.log(`\n...storing in Neo4j...`);
+
+    for (const [i, chunk] of chunks.entries()) {
+        await vectorStore.addDocuments([chunk])
+    }
+
+    console.log(`\n...Stored ${chunks.length} chunks to Neo4j! ✅...`);
 }
 
 const prepareRAG = async (vectorStore: Neo4jVectorStore) => {
@@ -26,16 +43,6 @@ const prepareRAG = async (vectorStore: Neo4jVectorStore) => {
     await storeChunksInNeo4j(vectorStore, chunks);
 
     console.log('\n...RAG prepared ! ✅...\n');
-}
-
-const storeChunksInNeo4j = async (vectorStore: Neo4jVectorStore, chunks: Document[]) => {
-    console.log(`\n...storing in Neo4j...`);
-
-    for (const [i, chunk] of chunks.entries()) {
-        await vectorStore.addDocuments([chunk])
-    }
-
-    console.log(`\n...Stored ${chunks.length} chunks to Neo4j! ✅...`);
 }
 
 export const askQuestions = async (questions: string[]) => {
@@ -102,14 +109,6 @@ const run = async () => {
     finally {
         neo4jVectorStore?.close();
     }
-
-
-    const questions = [
-        'What is a tensor ?',
-        // 'How tensorflow stores the data ?',
-        // 'What can man do with tensorflow.js?',
-        // 'What is the difference between regular tensorflow and tensorflow.js?'
-    ]
 
     // await askQuestions(questions);
 }

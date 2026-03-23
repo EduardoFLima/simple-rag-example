@@ -1,5 +1,5 @@
+import { PDFProcessor } from "./PDFProcessor.ts"
 import { Document } from "@langchain/core/documents";
-import { splitPdf } from "./fileLoader.ts";
 import { Neo4jVectorStore } from "@langchain/community/vectorstores/neo4j_vector";
 import { CONFIG } from "./config.ts";
 import { ChatOpenAI } from "@langchain/openai";
@@ -21,7 +21,7 @@ const prepareRAG = async (vectorStore: Neo4jVectorStore) => {
 
     await clearDB(vectorStore, CONFIG.neo4j.nodeLabel);
 
-    const chunks = await splitPdf();
+    const chunks = await new PDFProcessor(CONFIG.pdf.path, CONFIG.textSplitter).splitPdf();
 
     await storeChunksInNeo4j(vectorStore, chunks);
 

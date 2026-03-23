@@ -7,10 +7,11 @@ import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/huggingface_transformers";
 
 const questions = [
-    'What is a tensor ?',
-    // 'How tensorflow stores the data ?',
-    // 'What can man do with tensorflow.js?',
-    // 'What is the difference between regular tensorflow and tensorflow.js?'
+    "Como converter objetos JavaScript em tensores?",
+    "O que é normalização de dados e por que é necessária?",
+    "Como funciona uma rede neural no TensorFlow.js?",
+    "O que significa treinar uma rede neural?",
+    "o que é hot enconding e quando usar?"
 ]
 
 const clearDB = async (vectorStore: Neo4jVectorStore, nodeLabel: string) => {

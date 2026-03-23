@@ -45,7 +45,7 @@ const prepareRAG = async (vectorStore: Neo4jVectorStore) => {
     console.log('\n...RAG prepared ! ✅...\n');
 }
 
-export const askQuestions = async (questions: string[]) => {
+export const askQuestions = async (questions: string[], vectorStore: Neo4jVectorStore) => {
     console.log('...starting to ask questions...\n');
 
     for (const question of questions) {
@@ -53,6 +53,16 @@ export const askQuestions = async (questions: string[]) => {
         console.log(`\n=> Question: ${question}\n`)
 
         // enrich with RAG
+        const context: string = await vectorStore.similaritySearchWithScore(question, CONFIG.similarity.topK)
+            .then(documentsWithScore => documentsWithScore
+                .map(documentWithScore => ({
+                    document: documentWithScore[0],
+                    score: documentWithScore[1]
+                }))
+                .filter(documentWithScore => documentWithScore.score > 0.5)
+                .map(documentWithScore => documentWithScore.document.pageContent)
+                .join("\n\n")
+            );
 
         // handover question to LLM
         const nplModel = new ChatOpenAI({
@@ -81,7 +91,7 @@ export const askQuestions = async (questions: string[]) => {
                 `${idx + 1}. ${instruction}`
             ).join('\n'),
             question,
-            context: ``
+            context
         })
 
         console.log(`== response: ${response.content}`)
@@ -105,12 +115,13 @@ const run = async () => {
             CONFIG.neo4j
         )
         await prepareRAG(neo4jVectorStore);
+
+        await askQuestions(questions, neo4jVectorStore);
     }
     finally {
         neo4jVectorStore?.close();
     }
 
-    // await askQuestions(questions);
 }
 
 await run();

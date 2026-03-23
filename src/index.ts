@@ -1,71 +1,41 @@
 import { Document } from "@langchain/core/documents";
 import { splitPdf } from "./fileLoader.ts";
-import neo4j from "neo4j-driver";
+import { Neo4jVectorStore } from "@langchain/community/vectorstores/neo4j_vector";
 import { CONFIG } from "./config.ts";
-import { pipeline } from "@huggingface/transformers";
 import { ChatOpenAI } from "@langchain/openai";
-import { readFile } from "node:fs/promises"
 import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/huggingface_transformers";
 
-const embedder = await pipeline(
-    "feature-extraction",
-    CONFIG.embedding.modelName,
-    CONFIG.embedding.pretrainedOptions,
-);
+const clearDB = async (vectorStore: Neo4jVectorStore, nodeLabel: string) => {
+    console.log("\n...Cleaning existing docs...");
 
-const driver = neo4j.driver(
-    CONFIG.neo4j.url,
-    neo4j.auth.basic(
-        CONFIG.neo4j.username,
-        CONFIG.neo4j.password
+    await vectorStore.query(
+        `MATCH (n:\`${nodeLabel}\`) DETACH DELETE n`
     )
-)
 
-const prepareRAG = async () => {
-    console.log('\n...preparing RAG...\n');
-
-    const chunks = await splitPdf();
-    // console.log(`\n${JSON.stringify(chunks[0], null, 2)}\n`);
-    await storeChunksInNeo4j(chunks);
-
-    console.log('\n...RAG prepared !...\n');
+    console.log("\n...Docs successfully removed! ✅...");
 }
 
-const storeChunksInNeo4j = async (chunks: Document[]) => {
-    const session = driver.session();
+const prepareRAG = async (vectorStore: Neo4jVectorStore) => {
+    console.log('\n\n...preparing RAG...');
 
-    console.log(`\n...storing in Neo4j...\n`);
-    try {
-        for (const [i, chunk] of chunks.entries()) {
+    await clearDB(vectorStore, CONFIG.neo4j.nodeLabel);
 
-            const output = await embedder(chunk.pageContent, { pooling: "mean", normalize: true });
+    const chunks = await splitPdf();
 
-            const embedding = Array.from(output.data)
+    await storeChunksInNeo4j(vectorStore, chunks);
 
-            await session.run(
-                `CREATE (c:${CONFIG.neo4j.nodeLabel} {
-                    index: $index, 
-                    content: $content, 
-                    source: $source, 
-                    page: $page,
-                    embedding: $embedding
-                })`,
-                {
-                    index: neo4j.int(i),
-                    content: chunk.pageContent,
-                    source: chunk?.metadata?.source ?? '',
-                    page: neo4j.int(chunk?.metadata?.loc?.pageNumber),
-                    embedding,
-                }
-            );
+    console.log('\n...RAG prepared ! ✅...\n');
+}
 
-            console.log(`Saved ${chunks.length} chunks to Neo4j`);
-        }
+const storeChunksInNeo4j = async (vectorStore: Neo4jVectorStore, chunks: Document[]) => {
+    console.log(`\n...storing in Neo4j...`);
 
-    } finally {
-        await session.close();
-        await driver.close();
+    for (const [i, chunk] of chunks.entries()) {
+        await vectorStore.addDocuments([chunk])
     }
+
+    console.log(`\n...Stored ${chunks.length} chunks to Neo4j! ✅...`);
 }
 
 export const askQuestions = async (questions: string[]) => {
@@ -114,14 +84,34 @@ export const askQuestions = async (questions: string[]) => {
     console.log('\n...questions answered; closing application...\n');
 };
 
-await prepareRAG();
+const run = async () => {
+    const embeddings = new HuggingFaceTransformersEmbeddings({
+        model: CONFIG.embedding.modelName,
+        pretrainedOptions: CONFIG.embedding.pretrainedOptions as PretrainedOptions
+    })
+
+    let neo4jVectorStore = null;
+
+    try {
+        neo4jVectorStore = await Neo4jVectorStore.fromExistingGraph(
+            embeddings,
+            CONFIG.neo4j
+        )
+        await prepareRAG(neo4jVectorStore);
+    }
+    finally {
+        neo4jVectorStore?.close();
+    }
 
 
-const questions = [
-    'What is a tensor ?',
-    // 'How tensorflow stores the data ?',
-    // 'What can man do with tensorflow.js?',
-    // 'What is the difference between regular tensorflow and tensorflow.js?'
-]
+    const questions = [
+        'What is a tensor ?',
+        // 'How tensorflow stores the data ?',
+        // 'What can man do with tensorflow.js?',
+        // 'What is the difference between regular tensorflow and tensorflow.js?'
+    ]
 
-await askQuestions(questions);
+    // await askQuestions(questions);
+}
+
+await run();

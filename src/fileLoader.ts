@@ -12,5 +12,12 @@ export const splitPdf = async (): Promise<Document[]> => {
 
     const textSplitter = new RecursiveCharacterTextSplitter(CONFIG.textSplitter);
 
-    return await textSplitter.splitDocuments(docs);
+    const documents = await textSplitter.splitDocuments(docs);
+
+    return documents.map(doc => ({
+            ...doc,
+            metadata: {
+                source: doc.metadata.source,
+            }
+        }))
 };

@@ -1,9 +1,9 @@
 import { PDFProcessor } from "./PDFProcessor.ts"
-import { Neo4jVectorStore } from "@langchain/community/vectorstores/neo4j_vector";
 import { CONFIG } from "./config.ts";
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { VectorStore } from "./VectorStore.ts";
+import { StringOutputParser } from "@langchain/core/output_parsers";
 
 let neo4jVectorStore: VectorStore;
 
@@ -53,6 +53,7 @@ export const askQuestions = async (questions: string[]) => {
 
         const responseChain = ChatPromptTemplate.fromTemplate(CONFIG.templateText)
             .pipe(nplModel)
+            .pipe(new StringOutputParser())
 
         const response = await responseChain.invoke({
             role: promptConfig.role,
@@ -67,7 +68,7 @@ export const askQuestions = async (questions: string[]) => {
             context
         })
 
-        console.log(`\n== response: ${response.content}`)
+        console.log(`\n== response: ${response}`)
 
     }
 

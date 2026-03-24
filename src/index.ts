@@ -32,7 +32,7 @@ export const askQuestions = async (questions: string[]) => {
 
     for (const question of questions) {
 
-        console.log(`\n=> Question: ${question}\n`)
+        console.log(`\n=> Question: ${question}`)
 
         // enrich with RAG
         const context: string = await neo4jVectorStore.similaritySearch(question, CONFIG.similarity.topK)
@@ -67,7 +67,7 @@ export const askQuestions = async (questions: string[]) => {
             context
         })
 
-        console.log(`== response: ${response.content}`)
+        console.log(`\n== response: ${response.content}`)
 
     }
 

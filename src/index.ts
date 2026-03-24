@@ -30,6 +30,23 @@ const prepareRAG = async () => {
 export const askQuestions = async (questions: string[]) => {
     console.log('...starting to ask questions...\n');
 
+    const nplModel = new ChatOpenAI({
+        modelName: CONFIG.openRouter.nlpModel,
+        temperature: CONFIG.openRouter.temperature,
+        maxRetries: CONFIG.openRouter.maxRetries,
+        apiKey: CONFIG.openRouter.apiKey,
+        configuration: {
+            baseURL: CONFIG.openRouter.url,
+            defaultHeaders: CONFIG.openRouter.defaultHeaders
+        }
+    });
+
+    const { promptConfig } = CONFIG;
+
+    const responseChain = ChatPromptTemplate.fromTemplate(CONFIG.templateText)
+        .pipe(nplModel)
+        .pipe(new StringOutputParser())
+
     for (const question of questions) {
 
         console.log(`\n=> Question: ${question}`)
@@ -38,23 +55,6 @@ export const askQuestions = async (questions: string[]) => {
         const context: string = await neo4jVectorStore.similaritySearch(question, CONFIG.similarity.topK)
 
         // handover question to LLM
-        const nplModel = new ChatOpenAI({
-            modelName: CONFIG.openRouter.nlpModel,
-            temperature: CONFIG.openRouter.temperature,
-            maxRetries: CONFIG.openRouter.maxRetries,
-            apiKey: CONFIG.openRouter.apiKey,
-            configuration: {
-                baseURL: CONFIG.openRouter.url,
-                defaultHeaders: CONFIG.openRouter.defaultHeaders
-            }
-        });
-
-        const { promptConfig } = CONFIG;
-
-        const responseChain = ChatPromptTemplate.fromTemplate(CONFIG.templateText)
-            .pipe(nplModel)
-            .pipe(new StringOutputParser())
-
         const response = await responseChain.invoke({
             role: promptConfig.role,
             task: promptConfig.task,
@@ -69,7 +69,6 @@ export const askQuestions = async (questions: string[]) => {
         })
 
         console.log(`\n== response: ${response}`)
-
     }
 
     console.log('\n...questions answered; closing application...\n');
